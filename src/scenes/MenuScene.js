@@ -35,8 +35,9 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    // 1. Fond noir plein écran + halo central pourpre
+    // 1. Fond : noir de garde + image d'ambiance (salle du trône) en cover
     this.bg = this.add.rectangle(0, 0, 4000, 3000, IRON_DEEP).setOrigin(0).setDepth(0);
+    this.bgImage = this.add.image(0, 0, 'menu_bg').setDepth(0).setAlpha(0.9);
     this.backdrop = this.add.graphics().setDepth(1);
 
     // 2. Vignette écran, subtile (sous les torches pour ne pas les éteindre)
@@ -59,19 +60,17 @@ export default class MenuScene extends Phaser.Scene {
       quantity: 1,
     }).setDepth(15);
 
-    // 5. Blason (deux traits dorés + losange central)
-    this.crest = this.add.graphics().setDepth(100);
-
-    // 6. Titre gravé
-    this.title = this.add
-      .text(0, 0, 'ShadowGate Arena', {
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: '72px',
-        color: GOLD,
-      })
+    // 5. Blason peint (image du pack UI)
+    this.crest = this.add
+      .image(0, 0, 'crest_shadowgate')
       .setOrigin(0.5)
-      .setDepth(100)
-      .setShadow(0, 4, '#000000', 16, false, true);
+      .setDepth(100);
+
+    // 6. Logo peint (image du pack UI, 720×160)
+    this.title = this.add
+      .image(0, 0, 'logo_title')
+      .setOrigin(0.5)
+      .setDepth(100);
 
     this.subtitle = this.add
       .text(0, 0, 'Arène du Portail — Dark Fantasy médiévale', {
@@ -238,33 +237,10 @@ export default class MenuScene extends Phaser.Scene {
     return c;
   }
 
-  // --- Blason central : double filet doré + losange ---
+  // Positionne le blason peint (l'image du pack UI). Ancienne version dessinée
+  // au Graphics remplacée par crest_shadowgate.png.
   drawCrest(x, y) {
-    const g = this.crest;
-    g.clear();
-    const spread = 240;
-    // filet principal
-    g.lineStyle(1.8, GOLD_HEX, 0.9);
-    g.beginPath(); g.moveTo(x - spread, y); g.lineTo(x - 22, y); g.strokePath();
-    g.beginPath(); g.moveTo(x + 22, y); g.lineTo(x + spread, y); g.strokePath();
-    // filet secondaire, plus fin, dessous
-    g.lineStyle(1, 0x8a7a4a, 0.55);
-    g.beginPath(); g.moveTo(x - spread, y + 4); g.lineTo(x - 22, y + 4); g.strokePath();
-    g.beginPath(); g.moveTo(x + 22, y + 4); g.lineTo(x + spread, y + 4); g.strokePath();
-    // losange doré central
-    g.fillStyle(GOLD_HEX, 1);
-    g.beginPath();
-    g.moveTo(x, y - 9);
-    g.lineTo(x + 11, y);
-    g.lineTo(x, y + 9);
-    g.lineTo(x - 11, y);
-    g.closePath();
-    g.fillPath();
-    g.lineStyle(1.2, 0x3a2a10, 1);
-    g.strokePath();
-    // point central sombre pour donner du relief
-    g.fillStyle(0x3a2a10, 0.85);
-    g.fillCircle(x, y, 1.8);
+    this.crest.setPosition(x, y);
   }
 
   // --- Layout global ---
@@ -275,6 +251,10 @@ export default class MenuScene extends Phaser.Scene {
 
     // fond noir : couvre tout l'écran quelle que soit la taille
     this.bg.setSize(w, h);
+
+    // image d'ambiance en cover : remplit l'écran sans déformer
+    const cover = Math.max(w / this.bgImage.width, h / this.bgImage.height);
+    this.bgImage.setScale(cover).setPosition(cx, h / 2);
 
     // vignette : centrée, un peu plus grande que l'écran
     const vSize = Math.max(w, h) * 1.4;
@@ -304,12 +284,24 @@ export default class MenuScene extends Phaser.Scene {
     // Embers depuis le bord bas
     this.embers.setPosition(cx, h + 20);
 
-    // Blason au-dessus du titre
-    this.drawCrest(cx, h * 0.22);
+    // Logo : borné à 60 % de la largeur pour ne pas dominer sur un écran
+    // étroit, et on positionne crest/sous-titre en partant de sa hauteur
+    // rendue plutôt que d'offsets fixes qui écrasaient les deux voisins.
+    const logoScale = Math.min(1, (w * 0.6) / this.title.width);
+    this.title.setScale(logoScale);
+    const logoH = this.title.height * logoScale;
+    const logoY = h * 0.32;
+    this.title.setPosition(cx, logoY);
 
-    // Titre + sous-titre
-    this.title.setPosition(cx, h * 0.3);
-    this.subtitle.setPosition(cx, h * 0.3 + 52);
+    // Blason au-dessus : réduit, et positionné depuis SA demi-hauteur pour
+    // que son bord bas reste à distance du bord haut du logo.
+    const crestScale = 0.72;
+    this.crest.setScale(crestScale);
+    const crestHalf = (this.crest.height * crestScale) / 2;
+    this.drawCrest(cx, logoY - logoH / 2 - crestHalf - 12);
+
+    // Sous-titre juste sous le logo
+    this.subtitle.setPosition(cx, logoY + logoH / 2 + 18);
 
     // Colonne de boutons centrée
     const btnStart = h * 0.52;

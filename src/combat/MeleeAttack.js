@@ -32,38 +32,27 @@ export default class MeleeAttack {
     return hits;
   }
 
-  // Visuel : arc lumineux qui balaye devant l'attaquant puis s'estompe.
+  // Visuel : arc peint (slash_arc.png, 108°, teintable) orienté dans la
+  // direction du coup, qui s'étend légèrement et s'estompe.
   static showSwing(scene, attacker, angle, spec) {
-    const g = scene.add.graphics();
-    g.setDepth(400);
+    const img = scene.add
+      .image(attacker.x, attacker.y, 'slash_arc')
+      .setRotation(angle)
+      .setDepth(400)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setAlpha(0.9);
+    // la texture 128×128 couvre un rayon ~64 : on la met à l'échelle de la
+    // portée réelle de l'arme
+    const scale = (spec.range * 2) / 128;
+    img.setScale(scale * 0.88);
 
-    const draw = (progress) => {
-      g.clear();
-      const alpha = 1 - progress;
-      g.fillStyle(0xffffff, 0.18 * alpha);
-      g.lineStyle(2, 0xe8e0d0, 0.7 * alpha);
-      g.beginPath();
-      g.moveTo(attacker.x, attacker.y);
-      g.arc(
-        attacker.x,
-        attacker.y,
-        spec.range,
-        angle - spec.arc / 2,
-        angle + spec.arc / 2,
-        false,
-      );
-      g.closePath();
-      g.fillPath();
-      g.strokePath();
-    };
-
-    draw(0);
-    scene.tweens.addCounter({
-      from: 0,
-      to: 1,
+    scene.tweens.add({
+      targets: img,
+      alpha: 0,
+      scale: scale * 1.06,
       duration: 160,
-      onUpdate: (tw) => draw(tw.getValue()),
-      onComplete: () => g.destroy(),
+      ease: 'Quad.easeOut',
+      onComplete: () => img.destroy(),
     });
   }
 }

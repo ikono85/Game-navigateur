@@ -13,9 +13,12 @@ export default class Torch {
     this.baseY = y;
     this.phase = Math.random() * Math.PI * 2;
 
-    // La torche est légèrement au-dessus du sol de la tuile, sur le mur.
+    // Sconce et flamme : positions calées sur le pack peint. Le sconce
+    // (wall_decor_torch, 64×48) porte le bol dans le tiers supérieur ; la
+    // flamme (flame_torch, 24×36) est ancrée par le bas et repose au-dessus
+    // du bol.
     const sconceY = y;
-    const flameY = y - 8;
+    const flameY = y - 20;
 
     this.sconce = scene.add.image(x, sconceY, 'sconce').setDepth(6);
     this.flame = scene.add

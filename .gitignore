@@ -4,3 +4,7 @@ dist/
 .DS_Store
 .vite/
 .claude/settings.local.json
+
+# Dossier de livraison du pack d'assets — la copie canonique servie par le jeu
+# est public/assets/, celle-ci n'est que la source de dépôt locale.
+asset/

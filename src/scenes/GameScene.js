@@ -10,12 +10,13 @@ import LightingSystem from '../systems/LightingSystem.js';
 import Torch from '../entities/Torch.js';
 import { getClass, CLASSES } from '../classes/index.js';
 import { DONJON_XS } from '../maps/arena.js';
-import { FLOOR_FRAMES, wallFrame } from '../gfx/tileset.js';
+import { floorKey, wallKey } from '../gfx/tileset.js';
 
-// Les tuiles du pack sont assez claires : cette teinte les ramène dans
-// l'ambiance dark fantasy sans perdre le détail de la pierre.
-const FLOOR_TINT = 0x6b6478;
-const WALL_TINT = 0x8a8496;
+// Les assets peints sont déjà dans la bonne ambiance ; pas besoin de teinte.
+// Constantes conservées à null pour marquer que la sortie du pack CC0 est
+// terminée — si un futur pack a besoin d'être re-teinté, on remet une valeur.
+const FLOOR_TINT = null;
+const WALL_TINT = null;
 
 const OPPONENTS = 3;
 const SCORE_TO_WIN = 15;
@@ -303,24 +304,23 @@ export default class GameScene extends Phaser.Scene {
   }
 
   buildArena(map) {
-    // Les tuiles font 64 px, la grille de jeu 48 : on les réduit à l'affichage
-    // plutôt que de toucher aux distances de gameplay.
     for (let r = 0; r < map.length; r += 1) {
       for (let c = 0; c < map[r].length; c += 1) {
         const x = c * TILE_SIZE + TILE_SIZE / 2;
         const y = r * TILE_SIZE + TILE_SIZE / 2;
 
-        // sol partout, avec une variante tirée au sort pour casser la répétition
-        const frame = FLOOR_FRAMES[(r * 7 + c * 3) % FLOOR_FRAMES.length];
-        this.add
-          .image(x, y, 'floorSheet', frame)
-          .setDisplaySize(TILE_SIZE, TILE_SIZE)
-          .setTint(FLOOR_TINT);
+        // Sol : 4 variantes réparties de façon déterministe pour éviter que
+        // deux mêmes dalles se retrouvent côte à côte trop souvent.
+        const floor = this.add
+          .image(x, y, floorKey(r, c))
+          .setDisplaySize(TILE_SIZE, TILE_SIZE);
+        if (FLOOR_TINT !== null) floor.setTint(FLOOR_TINT);
 
         if (map[r][c] === 1) {
-          const wall = this.walls.create(x, y, 'wallSheet', wallFrame(map, r, c));
-          wall.setDisplaySize(TILE_SIZE, TILE_SIZE).setTint(WALL_TINT).setDepth(5);
-          // le corps physique suit l'échelle d'affichage
+          const wall = this.walls.create(x, y, wallKey(map, r, c));
+          wall.setDisplaySize(TILE_SIZE, TILE_SIZE).setDepth(5);
+          if (WALL_TINT !== null) wall.setTint(WALL_TINT);
+          // Corps physique aligné sur la display size
           wall.body.setSize(TILE_SIZE, TILE_SIZE, true);
         }
       }

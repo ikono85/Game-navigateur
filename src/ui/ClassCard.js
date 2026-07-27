@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 export const CARD_W = 262;
-export const CARD_H = 408;
+export const CARD_H = 480;
 
 const PAD = 18;
 const LABEL = '#c9c2d4';
@@ -29,10 +29,11 @@ export default class ClassCard {
     const top = -CARD_H / 2;
     let cy = top + 20;
 
-    // aperçu du personnage
-    const preview = scene.add.image(0, cy + 20, `player_${classDef.id}`).setScale(1.55);
+    // portrait peint de la classe (180×220, réduit pour tenir dans la carte)
+    const preview = scene.add.image(0, cy + 58, `portrait_${classDef.id}`);
+    preview.setDisplaySize(96, 117);
     this.container.add(preview);
-    cy += 48;
+    cy += 122;
 
     const name = scene.add
       .text(0, cy, classDef.name, {

@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { COLORS } from '../config.js';
 import Particles from './Particles.js';
 
 // Effets de sorts non-projectiles. Les projectiles magiques (boule de feu)
@@ -7,12 +6,19 @@ import Particles from './Particles.js';
 export default class Spell {
   // Explosion AoE à l'impact d'une boule de feu.
   static explode(scene, x, y, spec, attackerTeam, targets) {
-    // visuel : cercle qui grandit et s'estompe
-    const g = scene.add.graphics();
-    g.setDepth(420);
+    // Onde de choc peinte (shockwave.png teintable), qui s'étend et s'estompe
+    const wave = scene.add
+      .image(x, y, 'shockwave')
+      .setDepth(420)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setTint(0xffbb60)
+      .setAlpha(0.9);
+    const startScale = (spec.aoeRadius * 0.6) / 256;
+    const endScale = (spec.aoeRadius * 2.1) / 256;
+    wave.setScale(startScale);
 
-    // Flash lumineux : rayon suivant le cercle visible, intensité qui décroît.
-    // Vraie source de lumière — pas un rendu par-dessus le masque de ténèbres.
+    // Flash lumineux : vraie source de lumière — pas un rendu par-dessus le
+    // masque de ténèbres.
     const flash =
       scene.lighting &&
       scene.lighting.addLight(x, y, spec.aoeRadius * 2.2, 0xffbb60, 1.4);
@@ -26,15 +32,12 @@ export default class Spell {
       duration: 260,
       onUpdate: (tw) => {
         const p = tw.getValue();
-        g.clear();
-        g.fillStyle(COLORS.fireball, 0.35 * (1 - p));
-        g.fillCircle(x, y, spec.aoeRadius * (0.3 + 0.7 * p));
-        g.lineStyle(3, 0xffd08a, 0.8 * (1 - p));
-        g.strokeCircle(x, y, spec.aoeRadius * (0.3 + 0.7 * p));
+        wave.setScale(startScale + (endScale - startScale) * p);
+        wave.setAlpha(0.9 * (1 - p));
         if (flash) flash.intensity = 1.4 * (1 - p);
       },
       onComplete: () => {
-        g.destroy();
+        wave.destroy();
         if (flash && scene.lighting) scene.lighting.removeLight(flash);
       },
     });
@@ -52,29 +55,31 @@ export default class Spell {
     });
   }
 
-  // Bouclier magique : aura visuelle + réduction de dégâts sur le lanceur.
+  // Bouclier magique : aura peinte (spell_shield.png) qui suit le lanceur et
+  // pulse doucement, + réduction de dégâts.
   static shield(scene, caster, spec) {
     caster.applyShield(spec.duration, spec.reduction);
 
-    const g = scene.add.graphics();
-    g.setDepth(390);
+    const aura = scene.add
+      .image(caster.x, caster.y, 'spell_shield')
+      .setDepth(390)
+      .setBlendMode(Phaser.BlendModes.ADD);
     const endAt = scene.time.now + spec.duration;
 
     const ev = scene.time.addEvent({
       delay: 16,
       loop: true,
       callback: () => {
-        g.clear();
         if (!caster.active || scene.time.now >= endAt) {
-          g.destroy();
+          aura.destroy();
           ev.remove();
           return;
         }
-        const pulse = 0.6 + 0.2 * Math.sin(scene.time.now / 120);
-        g.lineStyle(2, COLORS.shield, pulse);
-        g.strokeCircle(caster.x, caster.y, 26);
-        g.fillStyle(COLORS.shield, 0.1);
-        g.fillCircle(caster.x, caster.y, 26);
+        const t = scene.time.now;
+        aura.setPosition(caster.x, caster.y);
+        aura.setAlpha(0.65 + 0.2 * Math.sin(t / 120));
+        aura.setScale(0.92 + 0.05 * Math.sin(t / 160));
+        aura.rotation += 0.004;
       },
     });
   }

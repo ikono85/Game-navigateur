@@ -1,5 +1,4 @@
 import { defineClass, areaDamage } from './BaseClass.js';
-import { COLORS } from '../config.js';
 
 // Mage : fragile et lent, mais énorme puissance de zone. Punit les groupes et
 // se dégage avec sa Nova.
@@ -36,21 +35,21 @@ export default defineClass({
     execute(player, { scene, combat }) {
       const spec = this;
 
-      // onde de choc visuelle
-      const g = scene.add.graphics().setDepth(430);
-      scene.tweens.addCounter({
-        from: 0,
-        to: 1,
+      // onde violette peinte (spell_nova_wave.png, teinte arcanique bakée)
+      const wave = scene.add
+        .image(player.x, player.y, 'spell_nova_wave')
+        .setDepth(430)
+        .setBlendMode('ADD')
+        .setAlpha(1)
+        .setScale(0.1);
+      const endScale = (spec.radius * 2.05) / 256;
+      scene.tweens.add({
+        targets: wave,
+        scale: endScale,
+        alpha: 0,
         duration: 340,
-        onUpdate: (tw) => {
-          const p = tw.getValue();
-          g.clear();
-          g.lineStyle(5 * (1 - p) + 1, COLORS.fireball, 1 - p);
-          g.strokeCircle(player.x, player.y, spec.radius * p);
-          g.lineStyle(2, 0x8a5ad8, 0.8 * (1 - p));
-          g.strokeCircle(player.x, player.y, spec.radius * p * 0.7);
-        },
-        onComplete: () => g.destroy(),
+        ease: 'Cubic.easeOut',
+        onComplete: () => wave.destroy(),
       });
 
       scene.cameras.main.shake(180, 0.007);

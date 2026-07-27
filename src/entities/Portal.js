@@ -20,6 +20,20 @@ export default class Portal extends Phaser.GameObjects.Container {
     this.expiresAt = scene.time.now + PORTAL.lifetime;
     this.link = null; // portail partenaire
 
+    // voile intérieur animé (4 frames en boucle), sous l'anneau et la spirale
+    if (!scene.anims.exists('portalGate')) {
+      scene.anims.create({
+        key: 'portalGate',
+        frames: [1, 2, 3, 4].map((i) => ({ key: `portal_gate_${i}` })),
+        frameRate: 8,
+        repeat: -1,
+      });
+    }
+    this.gate = scene.add.sprite(0, 0, 'portal_gate_1').play('portalGate');
+    // la texture 64×64 remplit l'intérieur de l'anneau (rayon ~26)
+    this.gate.setScale((PORTAL.radius * 2 - 8) / 64);
+    this.add(this.gate);
+
     // anneau extérieur
     this.ring = scene.add.image(0, 0, 'portal').setTint(color);
     this.add(this.ring);
@@ -108,6 +122,7 @@ export default class Portal extends Phaser.GameObjects.Container {
     const inert = !this.isLinked;
     this.letter.setAlpha(inert ? 0.35 : 1);
     this.swirl.setVisible(!inert);
+    this.gate.setVisible(!inert);
 
     if (this.light) {
       // pulsation légère quand actif, à peine visible quand inerte

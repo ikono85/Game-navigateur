@@ -1,134 +1,107 @@
 import Phaser from 'phaser';
-import { COLORS, PORTAL } from '../config.js';
 import { CLASSES } from '../classes/index.js';
-import { makeCharacterTexture, makeShadowTexture } from '../gfx/characters.js';
-import {
-  makeLightTexture,
-  makeFlameTexture,
-  makeSconceTexture,
-  makeVignetteTexture,
-} from '../gfx/lights.js';
-import {
-  makeSpeckTexture,
-  makeSmokeTexture,
-  makeBloodTexture,
-} from '../gfx/particles.js';
 
-// BootScene : charge les tuiles de donjon (CC0) et dessine tout le reste au
-// Canvas 2D — personnages, portails, projectiles.
+// BootScene : charge le pack d'assets peints (personnages, environnement, VFX,
+// projectiles, UI menu) puis démarre le menu.
+//
+// Historique : les modules src/gfx/{characters,lights,particles}.js contenaient
+// des générateurs Canvas 2D qui produisaient toutes ces textures à la volée.
+// Ils sont conservés dans l'arbre à titre d'archive/référence mais ne sont
+// plus appelés — les PNG peints les remplacent point par point.
+
+const A = 'assets';
+
+// Les 16 tuiles du mur autotile : nom = wall_N_E_S_W avec 1 = voisin mur
+// présent dans cette direction. Chargées une fois pour toutes ici, sélection
+// dans src/gfx/tileset.js.
+const WALL_KEYS = [];
+for (let n = 0; n < 2; n += 1) {
+  for (let e = 0; e < 2; e += 1) {
+    for (let s = 0; s < 2; s += 1) {
+      for (let w = 0; w < 2; w += 1) {
+        WALL_KEYS.push(`${n}_${e}_${s}_${w}`);
+      }
+    }
+  }
+}
+
 export default class BootScene extends Phaser.Scene {
   constructor() {
     super('BootScene');
   }
 
-  // Tuiles de donjon téléchargées (CC0, Screaming Brain Studios). Chemins
-  // relatifs : le site est servi depuis un sous-dossier.
   preload() {
-    this.load.spritesheet('floorSheet', 'assets/tiles/floor-stone.png', {
-      frameWidth: 64,
-      frameHeight: 64,
+    // --- Pack A — Personnages ---
+    CLASSES.forEach((c) => {
+      this.load.image(`player_${c.id}`, `${A}/characters/player_${c.id}.png`);
+      this.load.image(`enemy_${c.id}`, `${A}/characters/enemy_${c.id}.png`);
     });
-    this.load.spritesheet('wallSheet', 'assets/tiles/wall-stone.png', {
-      frameWidth: 64,
-      frameHeight: 64,
+    this.load.image('actorShadow', `${A}/characters/actor_shadow.png`);
+
+    // --- Pack B — Environnement ---
+    // Sols : 4 variantes séparées, le rendu choisit per-tile via un hash
+    for (let i = 1; i <= 4; i += 1) {
+      const n = String(i).padStart(2, '0');
+      this.load.image(`floor_${n}`, `${A}/environment/floor_stone_${n}.png`);
+    }
+    // Murs : 16 combinaisons N/E/S/W
+    WALL_KEYS.forEach((k) => {
+      this.load.image(`wall_${k}`, `${A}/environment/wall_${k}.png`);
+    });
+    // Décor mural
+    ['torch', 'banner_red', 'banner_blue', 'chains', 'crack', 'moss'].forEach((k) => {
+      this.load.image(`wall_decor_${k}`, `${A}/environment/wall_decor_${k}.png`);
+    });
+    // Props au sol
+    ['barrel', 'crate', 'pillar_broken', 'statue_broken', 'bones',
+      'bloodstain_01', 'bloodstain_02', 'rug_torn', 'coins', 'candle'].forEach((k) => {
+      this.load.image(`prop_${k}`, `${A}/environment/prop_${k}.png`);
+    });
+
+    // --- Pack C — VFX ---
+    // Alias 'sconce' vers le décor mural torch : Torch.js n'a pas à savoir
+    // que le sconce vient du pack Environnement, il attend juste la clé.
+    this.load.image('sconce', `${A}/environment/wall_decor_torch.png`);
+    this.load.image('flame', `${A}/vfx/flame_torch.png`);
+    this.load.image('lightRadial', `${A}/vfx/light_radial.png`);
+    this.load.image('vignette', `${A}/vfx/vignette.png`);
+    this.load.image('speck', `${A}/vfx/particle_speck.png`);
+    this.load.image('smoke', `${A}/vfx/particle_smoke.png`);
+    this.load.image('blood', `${A}/vfx/particle_blood.png`);
+    this.load.image('dust', `${A}/vfx/particle_dust.png`);
+    this.load.image('leaf', `${A}/vfx/particle_leaf.png`);
+    this.load.image('shockwave', `${A}/vfx/shockwave.png`);
+    this.load.image('slash_arc', `${A}/vfx/slash_arc.png`);
+    this.load.image('portal', `${A}/vfx/portal_ring.png`);
+    this.load.image('portalSwirl', `${A}/vfx/portal_swirl.png`);
+    for (let i = 1; i <= 4; i += 1) {
+      this.load.image(`portal_gate_${i}`, `${A}/vfx/portal_gate_${i}.png`);
+    }
+
+    // --- Pack D — Projectiles ---
+    this.load.image('arrow', `${A}/projectiles/arrow.png`);
+    this.load.image('arrow_glow', `${A}/projectiles/arrow_glow.png`);
+    this.load.image('fireball', `${A}/projectiles/fireball.png`);
+    // La clé 'spark' est utilisée par le pool procédural historique — mappée
+    // sur fireball_core (petit coeur d'orbe) pour les usages secondaires.
+    this.load.image('spark', `${A}/projectiles/fireball_core.png`);
+    this.load.image('spell_shield', `${A}/projectiles/spell_shield.png`);
+    this.load.image('spell_nova_wave', `${A}/projectiles/spell_nova_wave.png`);
+    this.load.image('spell_dagger_trail', `${A}/projectiles/spell_dagger_trail.png`);
+
+    // --- Pack E — UI du menu ---
+    this.load.image('logo_title', `${A}/ui/logo_title.png`);
+    this.load.image('crest_shadowgate', `${A}/ui/crest_shadowgate.png`);
+    this.load.image('menu_bg', `${A}/ui/menu_bg_atmosphere.png`);
+    CLASSES.forEach((c) => {
+      this.load.image(`portrait_${c.id}`, `${A}/ui/class_portrait_${c.id}.png`);
     });
   }
 
   create() {
-    // Deux sprites par classe : le tien, et la version hostile cerclée de rouge.
-    // Les bots jouent les mêmes classes que toi, il faut pouvoir les distinguer
-    // d'un coup d'œil au milieu de la mêlée.
-    CLASSES.forEach((c) => {
-      makeCharacterTexture(this, `player_${c.id}`, c, false);
-      makeCharacterTexture(this, `enemy_${c.id}`, c, true);
-    });
-    makeShadowTexture(this);
-    // Éclairage : halo radial, flamme, sconce, vignette écran
-    makeLightTexture(this);
-    makeFlameTexture(this);
-    makeSconceTexture(this);
-    makeVignetteTexture(this);
-    // Particules : étincelles, fumée, sang
-    makeSpeckTexture(this);
-    makeSmokeTexture(this);
-    makeBloodTexture(this);
-    this.makePortalTextures();
-    this.makeArrowTexture('arrow');
-    this.makeOrbTexture('fireball', COLORS.fireball, 9);
-    this.makeOrbTexture('spark', 0xffd08a, 4);
-
+    // Curseur global : croix dorée du pack UI, avec fallback crosshair CSS
+    // si l'image n'est pas encore chargée par le navigateur.
+    this.game.canvas.style.cursor = "url('assets/ui/cursor_crosshair.png') 16 16, crosshair";
     this.scene.start('MenuScene');
   }
-
-  // Flèche : petit trait effilé pointant vers la droite (angle 0)
-  makeArrowTexture(key) {
-    const w = 22;
-    const h = 8;
-    const g = this.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(COLORS.arrow, 1);
-    g.fillRect(0, h / 2 - 1, w - 6, 2);
-    g.fillTriangle(w - 8, 0, w - 8, h, w, h / 2);
-    g.generateTexture(key, w, h);
-    g.destroy();
-  }
-
-  // Orbe lumineux (boule de feu, particules) : dégradé simulé par cercles
-  makeOrbTexture(key, color, radius) {
-    const size = radius * 2 + 6;
-    const c = size / 2;
-    const g = this.make.graphics({ x: 0, y: 0, add: false });
-    g.fillStyle(color, 0.25);
-    g.fillCircle(c, c, radius + 3);
-    g.fillStyle(color, 1);
-    g.fillCircle(c, c, radius);
-    g.fillStyle(0xffffff, 0.75);
-    g.fillCircle(c, c, Math.max(1, radius * 0.4));
-    g.generateTexture(key, size, size);
-    g.destroy();
-  }
-
-  // Portail : un anneau + une spirale, générés en blanc pour être teintés
-  // à la couleur du propriétaire.
-  makePortalTextures() {
-    const r = PORTAL.radius;
-    const size = r * 2 + 6;
-    const c = size / 2;
-
-    const ring = this.make.graphics({ x: 0, y: 0, add: false });
-    ring.lineStyle(4, 0xffffff, 1);
-    ring.strokeCircle(c, c, r);
-    ring.lineStyle(2, 0xffffff, 0.45);
-    ring.strokeCircle(c, c, r - 6);
-    // encoches sur l'anneau, pour rendre la rotation lisible
-    for (let i = 0; i < 8; i += 1) {
-      const a = (i / 8) * Math.PI * 2;
-      ring.lineStyle(3, 0xffffff, 0.9);
-      ring.beginPath();
-      ring.moveTo(c + Math.cos(a) * (r - 3), c + Math.sin(a) * (r - 3));
-      ring.lineTo(c + Math.cos(a) * (r + 3), c + Math.sin(a) * (r + 3));
-      ring.strokePath();
-    }
-    ring.generateTexture('portal', size, size);
-    ring.destroy();
-
-    // spirale : trois bras incurvés
-    const swirl = this.make.graphics({ x: 0, y: 0, add: false });
-    for (let arm = 0; arm < 3; arm += 1) {
-      const base = (arm / 3) * Math.PI * 2;
-      swirl.lineStyle(3, 0xffffff, 0.75);
-      swirl.beginPath();
-      for (let t = 0; t <= 1; t += 0.08) {
-        const a = base + t * 2.2;
-        const rad = t * (r - 4);
-        const px = c + Math.cos(a) * rad;
-        const py = c + Math.sin(a) * rad;
-        if (t === 0) swirl.moveTo(px, py);
-        else swirl.lineTo(px, py);
-      }
-      swirl.strokePath();
-    }
-    swirl.generateTexture('portalSwirl', size, size);
-    swirl.destroy();
-  }
-
 }
