@@ -1,111 +1,106 @@
 import Phaser from 'phaser';
-import { CLASSES } from '../classes/index.js';
-import ClassCard, { CARD_W, CARD_H } from '../ui/ClassCard.js';
+import '../ui/class-select/class-select.css';
 
-const GAP = 22;
+// Correspondance carte → id de classe du jeu. Les visuels parlent français
+// (« guerrier ») alors que les définitions de classes sont en anglais.
+const CARDS = [
+  { slot: 'guerrier', classId: 'warrior', label: 'LE GUERRIER' },
+  { slot: 'mage', classId: 'mage', label: 'LE MAGE' },
+  { slot: 'archer', classId: 'archer', label: "L'ARCHER" },
+  { slot: 'assassin', classId: 'assassin', label: "L'ASSASSIN" },
+];
 
-// Écran de sélection de classe. La rangée de cartes se recentre sur la largeur
-// disponible, et se resserre si la fenêtre est trop étroite.
+// Écran de sélection de classe en HTML/CSS superposé au canvas Phaser.
+// La scène Phaser ne rend rien elle-même : elle monte l'overlay DOM à
+// l'entrée et le démonte à la sortie (shutdown).
 export default class ClassSelectScene extends Phaser.Scene {
   constructor() {
     super('ClassSelectScene');
   }
 
   create() {
-    this.backdrop = this.add.graphics();
-
-    this.title = this.add
-      .text(0, 0, 'Choisis ta classe', {
-        fontFamily: 'Georgia, "Times New Roman", serif',
-        fontSize: '40px',
-        color: '#c9a24a',
-      })
-      .setOrigin(0.5)
-      .setShadow(0, 2, '#000000', 10, false, true);
-
-    this.selectedId = CLASSES[0].id;
-
-    this.cards = CLASSES.map(
-      (def) => new ClassCard(this, 0, 0, def, (id) => this.select(id)),
-    );
-
-    this.startBtn = this.add
-      .text(0, 0, '▶  Entrer dans l\'arène', {
-        fontFamily: 'Segoe UI, system-ui, sans-serif',
-        fontSize: '24px',
-        color: '#e8e0d0',
-        backgroundColor: '#1d1d28',
-        padding: { x: 28, y: 13 },
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerover', () => this.startBtn.setStyle({ backgroundColor: '#2c2c3c' }))
-      .on('pointerout', () => this.startBtn.setStyle({ backgroundColor: '#1d1d28' }))
-      .on('pointerdown', () => this.startGame());
-
-    this.hint = this.add
-      .text(
-        0,
-        0,
-        'Clic G : attaquer   •   Clic D / Espace : spécial   •   3 : bouclier   •   E / R : portails   •   Échap : retour',
-        {
-          fontFamily: 'Segoe UI, system-ui, sans-serif',
-          fontSize: '13px',
-          color: '#6a6478',
-        },
-      )
-      .setOrigin(0.5);
-
-    this.layout();
-    this.scale.on('resize', this.layout, this);
-    this.events.once('shutdown', () => this.scale.off('resize', this.layout, this));
+    this.selectedId = null;
+    this.buildOverlay();
 
     this.input.keyboard.on('keydown-ESC', () => this.scene.start('MenuScene'));
     this.input.keyboard.on('keydown-ENTER', () => this.startGame());
-
-    this.select(this.selectedId);
+    this.events.once('shutdown', () => this.destroyOverlay());
   }
 
-  layout() {
-    const w = this.scale.width;
-    const h = this.scale.height;
-    const cx = w / 2;
+  buildOverlay() {
+    const cardHtml = (c) => `
+      <article class="cs-card" data-class="${c.slot}" data-class-id="${c.classId}" tabindex="0" role="button" aria-pressed="false">
+        <div class="cs-art">
+          <span class="cs-ember cs-ember--tl"></span>
+          <span class="cs-ember cs-ember--tr"></span>
+          <span class="cs-ember cs-ember--bl"></span>
+          <span class="cs-ember cs-ember--br"></span>
+        </div>
+        <div class="cs-plate">
+          <span class="cs-runes">ᛗ ᚱ ᚦ</span>
+          <span class="cs-name">${c.label}</span>
+          <span class="cs-runes">ᚲ ᚹ ᛊ</span>
+        </div>
+        <button type="button" class="cs-btn">SÉLECTIONNER</button>
+      </article>`;
 
-    this.backdrop.clear();
-    this.backdrop.fillStyle(0x181228, 0.45);
-    this.backdrop.fillCircle(cx, h * 0.42, Math.max(w, h) * 0.38);
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'cs-overlay';
+    this.overlay.innerHTML = `
+      <section class="cs-root">
+        <div class="cs-panel">
+          <div class="cs-banner">
+            <div class="cs-banner__inner">
+              <h1 class="cs-title">CHOISISSEZ VOTRE CLASSE</h1>
+            </div>
+          </div>
+          <div class="cs-grid">${CARDS.map(cardHtml).join('')}</div>
+          <p class="cs-status">Le sort n'est pas encore jeté…</p>
+          <button type="button" class="cs-start" disabled>ENTRER DANS L'ARÈNE</button>
+          <p class="cs-hint">Clic G : attaquer • Clic D / Espace : spécial • 3 : bouclier • E / R : portails • Échap : retour</p>
+        </div>
+      </section>`;
+    document.body.appendChild(this.overlay);
 
-    this.title.setPosition(cx, Math.max(34, h * 0.06));
+    const cards = Array.from(this.overlay.querySelectorAll('.cs-card'));
+    const status = this.overlay.querySelector('.cs-status');
+    const startBtn = this.overlay.querySelector('.cs-start');
 
-    // Si la fenêtre est trop étroite pour la rangée, on réduit l'échelle plutôt
-    // que de laisser les cartes se chevaucher ou sortir de l'écran.
-    const n = this.cards.length;
-    const naturalW = n * CARD_W + (n - 1) * GAP;
-    const available = w - 48;
-    const scale = Math.min(1, available / naturalW);
+    const select = (card) => {
+      const id = card.dataset.classId;
+      const name = card.querySelector('.cs-name').textContent.trim();
+      cards.forEach((c) => {
+        const on = c === card;
+        c.classList.toggle('is-selected', on);
+        c.setAttribute('aria-pressed', String(on));
+        c.querySelector('.cs-btn').textContent = on ? 'CHOISI ✓' : 'SÉLECTIONNER';
+      });
+      this.selectedId = id;
+      status.textContent = `Votre destin : ${name}`;
+      startBtn.disabled = false;
+    };
 
-    const stepX = (CARD_W + GAP) * scale;
-    const rowW = naturalW * scale;
-    const startX = cx - rowW / 2 + (CARD_W * scale) / 2;
-
-    const rowCenterY = this.title.y + 34 + (CARD_H * scale) / 2;
-
-    this.cards.forEach((card, i) => {
-      card.container.setScale(scale);
-      card.setPosition(startX + i * stepX, rowCenterY);
+    cards.forEach((card) => {
+      card.addEventListener('click', () => select(card));
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          select(card);
+        }
+      });
     });
-
-    const rowBottom = rowCenterY + (CARD_H * scale) / 2;
-    this.startBtn.setPosition(cx, Math.min(h - 62, rowBottom + 44));
-    this.hint.setPosition(cx, Math.min(h - 20, rowBottom + 92));
+    startBtn.addEventListener('click', () => this.startGame());
   }
 
-  select(id) {
-    this.selectedId = id;
-    this.cards.forEach((c) => c.setSelected(c.classDef.id === id));
+  destroyOverlay() {
+    if (this.overlay) {
+      this.overlay.remove();
+      this.overlay = null;
+    }
   }
 
   startGame() {
+    if (!this.selectedId) return;
     this.scene.start('GameScene', { classId: this.selectedId });
   }
 }

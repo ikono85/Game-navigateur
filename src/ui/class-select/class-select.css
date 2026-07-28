@@ -1,0 +1,234 @@
+/* ============================================================
+   Dark Fantasy — Écran de sélection de classe
+   Remplace les 4 images via les variables ci-dessous.
+   ============================================================ */
+.cs-root {
+  /* >>> TES ASSETS ICI <<< */
+  --img-archer:   url("assets/archer.png");
+  --img-mage:     url("assets/mage.png");
+  --img-assassin: url("assets/assassin.png");
+  --img-guerrier: url("assets/guerrier.png");
+
+  /* Palette */
+  --ember:        #ff4d1f;
+  --ember-deep:   #7d1f14;
+  --stone-1:      #241f1a;
+  --stone-2:      #15120f;
+  --stone-edge:   #332b24;
+  --stone-edge-hot: #6b3a24;
+  --parchment-1:  #e9dcbc;
+  --parchment-2:  #cdba95;
+  --parchment-3:  #a89372;
+  --ink:          #1e1509;
+  --text:         #e6dcc6;
+  --card-ratio:   226 / 330;
+
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 28px clamp(14px, 3vw, 44px) 40px;
+  font-family: Cinzel, "Times New Roman", serif;
+  color: var(--text);
+  background: radial-gradient(120% 90% at 50% 0%, #23201c 0%, #12100e 55%, #070606 100%);
+}
+.cs-root *, .cs-root *::before, .cs-root *::after { box-sizing: border-box; }
+
+.cs-panel {
+  max-width: 1400px;
+  margin: 0 auto;
+  border: 3px solid #2f2823;
+  border-radius: 8px;
+  padding: clamp(16px, 2.5vw, 34px);
+  background: linear-gradient(#1b1815, #100e0c);
+  box-shadow: inset 0 0 90px rgba(0,0,0,.9), 0 0 0 1px #4a3f34, 0 24px 60px rgba(0,0,0,.7);
+}
+
+/* ---------- Bannière de titre ---------- */
+.cs-banner { display: flex; justify-content: center; margin-bottom: clamp(18px, 3vw, 34px); }
+.cs-banner__inner {
+  position: relative;
+  padding: 14px clamp(28px, 6vw, 90px);
+  background: linear-gradient(#e8d9b5, #c9b48b 55%, #a08b62);
+  border-top: 2px solid #f2e7cd;
+  border-bottom: 2px solid #6f5c3c;
+  box-shadow: 0 10px 26px rgba(0,0,0,.65), inset 0 0 40px rgba(120,88,48,.35);
+}
+.cs-banner__inner::before,
+.cs-banner__inner::after {
+  content: ""; position: absolute; top: 0; bottom: 0; width: 22px;
+  background: linear-gradient(#8a7550, #5f4d33);
+}
+.cs-banner__inner::before { left: -22px; box-shadow: inset -6px 0 10px rgba(0,0,0,.5); }
+.cs-banner__inner::after  { right: -22px; box-shadow: inset 6px 0 10px rgba(0,0,0,.5); }
+.cs-title {
+  margin: 0;
+  font-family: "Cinzel Decorative", Cinzel, serif;
+  font-weight: 900;
+  font-size: clamp(20px, 3.4vw, 40px);
+  letter-spacing: .1em;
+  color: #1d1409;
+  text-shadow: 0 1px 0 rgba(255,246,222,.6);
+}
+
+/* ---------- Grille ---------- */
+.cs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(232px, 1fr));
+  gap: clamp(14px, 1.8vw, 26px);
+}
+
+/* ---------- Carte ---------- */
+.cs-card {
+  padding: 10px;
+  border: 2px solid var(--stone-edge);
+  border-radius: 4px;
+  background: linear-gradient(var(--stone-1), var(--stone-2));
+  box-shadow: inset 0 0 40px rgba(0,0,0,.6), 0 10px 24px rgba(0,0,0,.55);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  cursor: pointer;
+}
+.cs-card:hover, .cs-card:focus-within {
+  border-color: var(--stone-edge-hot);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 0 26px rgba(255,80,30,.28), 0 16px 36px rgba(0,0,0,.65);
+}
+.cs-card.is-selected {
+  border-color: var(--stone-edge-hot);
+  transform: translateY(-6px) scale(1.015);
+  box-shadow: 0 0 0 1px var(--ember), 0 0 34px rgba(255,80,30,.5), 0 18px 40px rgba(0,0,0,.7);
+}
+
+/* ---------- Illustration ---------- */
+.cs-art {
+  position: relative;
+  aspect-ratio: var(--card-ratio);
+  background-color: #0b0a09;
+  background-size: cover;
+  background-position: center;
+  border: 2px solid #241f1a;
+  box-shadow: inset 0 0 60px rgba(0,0,0,.8);
+}
+.cs-art::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(0,0,0,.35), rgba(0,0,0,0) 35%, rgba(0,0,0,.45));
+}
+.cs-card[data-class="archer"]   .cs-art { background-image: var(--img-archer); }
+.cs-card[data-class="mage"]     .cs-art { background-image: var(--img-mage); }
+.cs-card[data-class="assassin"] .cs-art { background-image: var(--img-assassin); }
+.cs-card[data-class="guerrier"] .cs-art { background-image: var(--img-guerrier); }
+
+/* Braises d'angle */
+.cs-ember {
+  position: absolute; width: 16px; height: 16px;
+  background: var(--ember-deep);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  box-shadow: 0 0 12px var(--ember);
+  animation: cs-ember-pulse 3.4s ease-in-out infinite;
+}
+.cs-ember--tl { top: 4px; left: 4px; }
+.cs-ember--tr { top: 4px; right: 4px; animation-delay: .8s; }
+.cs-ember--bl { bottom: 4px; left: 4px; animation-delay: 1.6s; }
+.cs-ember--br { bottom: 4px; right: 4px; animation-delay: 2.4s; }
+@keyframes cs-ember-pulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+/* ---------- Plaque parchemin ---------- */
+.cs-plate {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(var(--parchment-1), var(--parchment-2) 60%, var(--parchment-3));
+  border-top: 1px solid #f6ecd3;
+  border-bottom: 1px solid #6d5a3b;
+  box-shadow: 0 6px 16px rgba(0,0,0,.55), inset 0 0 26px rgba(120,88,48,.3);
+}
+.cs-runes {
+  font-family: "Cinzel Decorative", Cinzel, serif;
+  font-size: 8px; letter-spacing: .18em; color: #5a4526; opacity: .75;
+}
+.cs-name {
+  font-weight: 700;
+  font-size: clamp(15px, 1.5vw, 22px);
+  letter-spacing: .06em;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+/* ---------- Bouton ---------- */
+.cs-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px 8px;
+  font-family: Cinzel, serif;
+  font-weight: 700;
+  font-size: clamp(11px, 1.05vw, 14px);
+  letter-spacing: .16em;
+  color: var(--ink);
+  cursor: pointer;
+  border: none;
+  border-top: 1px solid #f4e9cf;
+  border-bottom: 1px solid #6d5a3b;
+  background: linear-gradient(#e5d7b4, #c6b18b 60%, #a28d6a);
+  box-shadow: 0 6px 14px rgba(0,0,0,.5), inset 0 0 22px rgba(120,88,48,.28);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease;
+}
+.cs-btn:hover { filter: brightness(1.08); box-shadow: 0 0 22px rgba(255,80,30,.35), inset 0 0 26px rgba(120,88,48,.35); }
+.cs-btn:active { transform: translateY(2px) scale(.985); box-shadow: inset 0 3px 10px rgba(0,0,0,.5); }
+.cs-btn:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+
+/* ---------- Statut ---------- */
+.cs-status {
+  margin-top: clamp(16px, 2.4vw, 30px);
+  min-height: 26px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #c98a55;
+  text-shadow: 0 0 16px rgba(255,90,30,.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cs-card, .cs-btn, .cs-ember { transition: none; animation: none; }
+  .cs-card:hover, .cs-card.is-selected { transform: none; }
+}
+
+/* ---------- Ajouts pour l'intégration dans le jeu ---------- */
+/* L'écran vit en superposition du canvas Phaser, il doit donc être
+   fixé et scrollable si la fenêtre est plus petite que le contenu. */
+.cs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  overflow-y: auto;
+}
+
+/* Bouton de lancement sous la grille : même matière que .cs-btn mais
+   plus large ; grisé tant qu'aucune classe n'est choisie. */
+.cs-start {
+  display: block;
+  margin: clamp(16px, 2.4vw, 30px) auto 0;
+  padding: 14px 46px;
+  font-family: Cinzel, serif;
+  font-weight: 700;
+  font-size: clamp(14px, 1.3vw, 18px);
+  letter-spacing: .18em;
+  color: var(--ink);
+  cursor: pointer;
+  border: none;
+  border-top: 1px solid #f4e9cf;
+  border-bottom: 1px solid #6d5a3b;
+  background: linear-gradient(#e5d7b4, #c6b18b 60%, #a28d6a);
+  box-shadow: 0 6px 14px rgba(0,0,0,.5), inset 0 0 22px rgba(120,88,48,.28);
+  transition: transform .12s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease;
+}
+.cs-start:hover:not(:disabled) { filter: brightness(1.08); box-shadow: 0 0 22px rgba(255,80,30,.35), inset 0 0 26px rgba(120,88,48,.35); }
+.cs-start:active:not(:disabled) { transform: translateY(2px) scale(.985); }
+.cs-start:focus-visible { outline: 2px solid var(--ember); outline-offset: 2px; }
+.cs-start:disabled { opacity: .45; cursor: not-allowed; }
+
+.cs-hint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 12px;
+  letter-spacing: .08em;
+  color: #7d715f;
+}
