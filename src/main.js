@@ -1,9 +1,11 @@
 import Phaser from 'phaser';
+import Sfx from './systems/Sfx.js';
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
 import MenuBgScene from './scenes/MenuBgScene.js';
 import ClassSelectScene from './scenes/ClassSelectScene.js';
 import GameScene from './scenes/GameScene.js';
+import PauseScene from './scenes/PauseScene.js';
 
 // Rendu net : le canvas fait exactement la taille de la fenêtre (mode RESIZE),
 // donc aucune mise à l'échelle. C'est ce qui pixelisait tout auparavant : le jeu
@@ -32,7 +34,7 @@ const config = {
       gravity: { x: 0, y: 0 },
     },
   },
-  scene: [BootScene, MenuBgScene, MenuScene, ClassSelectScene, GameScene],
+  scene: [BootScene, MenuBgScene, MenuScene, ClassSelectScene, GameScene, PauseScene],
 };
 
 const game = new Phaser.Game(config);
@@ -52,6 +54,12 @@ function showFatal(message) {
     'box-shadow:0 4px 24px #000a;';
   document.body.appendChild(box);
 }
+// Débloque le contexte audio au tout premier geste (politique d'autoplay des
+// navigateurs). `once` par type suffit : ensure() reprend ensuite tout seul.
+const unlockAudio = () => Sfx.unlock();
+window.addEventListener('pointerdown', unlockAudio, { once: true });
+window.addEventListener('keydown', unlockAudio, { once: true });
+
 window.addEventListener('error', (e) => showFatal(e.message || 'inconnue'));
 window.addEventListener('unhandledrejection', (e) =>
   showFatal((e.reason && e.reason.message) || 'promesse rejetée'),

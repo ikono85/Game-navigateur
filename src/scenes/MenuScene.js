@@ -552,6 +552,13 @@ export default class MenuScene extends Phaser.Scene {
       () => setSetting('screenShake', !getSetting('screenShake')),
     );
 
+    addRow(
+      3,
+      'Son',
+      () => (getSetting('sound') ? 'OUI' : 'NON'),
+      () => setSetting('sound', !getSetting('sound')),
+    );
+
     const tip = this.add
       .text(0, H / 2 - 28, 'Les réglages sont mémorisés sur cet appareil', {
         fontFamily: 'Segoe UI, sans-serif',

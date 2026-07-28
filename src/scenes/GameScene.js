@@ -96,7 +96,7 @@ export default class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize', this.applyZoom, this));
 
     this.hud = new Hud(this, this.player);
-    this.input.keyboard.on('keydown-ESC', () => this.leaveToMenu());
+    this.input.keyboard.on('keydown-ESC', () => this.pauseGame());
     this.input.setDefaultCursor(CROSSHAIR_CURSOR);
     this.cameras.main.fadeIn(350, 0, 0, 0);
 
@@ -234,7 +234,15 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  // Sortie vers le menu en fondu au noir (Échap ou fin de match).
+  // Met la partie en pause et affiche PauseScene par-dessus. Ignorée si le
+  // match est terminé ou si on est déjà en train de quitter.
+  pauseGame() {
+    if (this.matchOver || this.leavingScene) return;
+    this.scene.pause();
+    this.scene.launch('PauseScene');
+  }
+
+  // Sortie vers le menu en fondu au noir (fin de match).
   leaveToMenu() {
     if (this.leavingScene) return;
     this.leavingScene = true;

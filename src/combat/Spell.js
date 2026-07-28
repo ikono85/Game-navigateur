@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import Particles from './Particles.js';
 import { screenShake } from '../systems/Settings.js';
+import Sfx from '../systems/Sfx.js';
 
 // Effets de sorts non-projectiles. Les projectiles magiques (boule de feu)
 // passent par Projectile ; ici on gère l'explosion à l'impact et le bouclier.
@@ -47,6 +48,7 @@ export default class Spell {
     });
 
     screenShake(scene, 120, 0.004);
+    Sfx.explosion();
 
     targets.forEach((t) => {
       if (!t.active || t.isDead || t.team === attackerTeam) return;
