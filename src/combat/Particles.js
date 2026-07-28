@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fxCount } from '../systems/Settings.js';
 
 // Effets de particules. Regroupés en helpers statiques pour éviter d'éparpiller
 // les configs d'emitters dans les entités qui les demandent.
@@ -24,7 +25,7 @@ export default class Particles {
       emitting: false,
     });
     em.setDepth(430);
-    em.explode(count);
+    em.explode(fxCount(count));
     scene.time.delayedCall(500, () => em.destroy());
   }
 
@@ -62,7 +63,7 @@ export default class Particles {
       emitting: false,
     });
     embers.setDepth(430);
-    embers.explode(Math.round(radius / 2.5));
+    embers.explode(fxCount(Math.round(radius / 2.5)));
 
     // fumée : plus lente, plus grosse, sans additif — se lit comme un voile
     const smoke = scene.add.particles(x, y, 'smoke', {
@@ -75,7 +76,7 @@ export default class Particles {
       emitting: false,
     });
     smoke.setDepth(415);
-    smoke.explode(Math.round(radius / 6));
+    smoke.explode(fxCount(Math.round(radius / 6)));
 
     scene.time.delayedCall(1000, () => {
       embers.destroy();
@@ -119,7 +120,7 @@ export default class Particles {
       emitting: false,
     });
     em.setDepth(15);
-    em.explode(14);
+    em.explode(fxCount(14));
     scene.time.delayedCall(800, () => em.destroy());
   }
 }

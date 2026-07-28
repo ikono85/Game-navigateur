@@ -1,4 +1,5 @@
 import { defineClass, areaDamage } from './BaseClass.js';
+import { screenShake } from '../systems/Settings.js';
 
 // Mage : fragile et lent, mais énorme puissance de zone. Punit les groupes et
 // se dégage avec sa Nova.
@@ -52,7 +53,7 @@ export default defineClass({
         onComplete: () => wave.destroy(),
       });
 
-      scene.cameras.main.shake(180, 0.007);
+      screenShake(scene, 180, 0.007);
 
       areaDamage(scene, combat, {
         x: player.x,

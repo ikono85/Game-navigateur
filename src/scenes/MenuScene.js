@@ -8,6 +8,8 @@ import {
   keyCodeToName,
   isBindable,
 } from '../systems/Keybindings.js';
+import { getSetting, setSetting } from '../systems/Settings.js';
+import { SWORD_CURSOR } from '../ui/cursors.js';
 
 // Écran titre.
 //
@@ -45,9 +47,22 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   create() {
-    // 1. Fond : noir de garde + image d'ambiance (salle du trône) en cover
-    this.bg = this.add.rectangle(0, 0, 4000, 3000, IRON_DEEP).setOrigin(0).setDepth(0);
-    this.bgImage = this.add.image(0, 0, 'menu_bg').setDepth(0).setAlpha(0.9);
+    // 0. Aperçu animé : la scène de démo (bots qui s'affrontent) tourne
+    // derrière le menu ; notre voile sombre la laisse deviner sans gêner
+    // la lecture des boutons.
+    this.scene.launch('MenuBgScene');
+    this.scene.sendToBack('MenuBgScene');
+    this.events.once('shutdown', () => this.scene.stop('MenuBgScene'));
+
+    this.input.setDefaultCursor(SWORD_CURSOR);
+
+    // 1. Voile sombre translucide au-dessus de la démo (remplace l'ancienne
+    // image de fond opaque, qui masquerait l'aperçu).
+    this.bg = this.add
+      .rectangle(0, 0, 4000, 3000, IRON_DEEP)
+      .setOrigin(0)
+      .setDepth(0)
+      .setAlpha(0.72);
     this.backdrop = this.add.graphics().setDepth(1);
 
     // 2. Vignette écran, subtile (sous les torches pour ne pas les éteindre)
@@ -66,7 +81,7 @@ export default class MenuScene extends Phaser.Scene {
       alpha: { start: 0.65, end: 0 },
       tint: [0xffb050, 0xff8030, 0xffd080],
       blendMode: 'ADD',
-      frequency: 180,
+      frequency: getSetting('effectsQuality') === 'low' ? 420 : 180,
       quantity: 1,
     }).setDepth(15);
 
@@ -92,12 +107,14 @@ export default class MenuScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(100);
 
-    // 7. Boutons du menu
+    // 7. Boutons du menu (navigables aux flèches, voir setFocus)
     this.buttons = [
       this.makeButton('▶  JOUER', () => this.goTo('ClassSelectScene')),
       this.makeButton('⚔  COMMANDES', () => this.openCommandsPanel()),
+      this.makeButton('✦  OPTIONS', () => this.openOptionsPanel()),
       this.makeButton('✧  CRÉDITS', () => this.openCreditsPanel()),
     ];
+    this.setFocus(0);
 
     // 8. Footer
     this.footer = this.add
@@ -120,10 +137,16 @@ export default class MenuScene extends Phaser.Scene {
     // Les handlers vérifient l'absence de panneau ouvert pour ne pas voler
     // les touches destinées à une saisie de rebind.
     this.input.keyboard.on('keydown-ENTER', () => {
-      if (!this.panel) this.goTo('ClassSelectScene');
+      if (!this.panel) this.activateFocused();
     });
     this.input.keyboard.on('keydown-SPACE', () => {
-      if (!this.panel) this.goTo('ClassSelectScene');
+      if (!this.panel) this.activateFocused();
+    });
+    this.input.keyboard.on('keydown-UP', () => {
+      if (!this.panel) this.setFocus(this.focusIndex - 1);
+    });
+    this.input.keyboard.on('keydown-DOWN', () => {
+      if (!this.panel) this.setFocus(this.focusIndex + 1);
     });
     this.input.keyboard.on('keydown-C', () => {
       if (!this.panel) this.openCommandsPanel();
@@ -143,6 +166,18 @@ export default class MenuScene extends Phaser.Scene {
         this.children.list.forEach((o) => o.updateText && o.updateText());
       });
     }
+  }
+
+  // --- Navigation clavier : un bouton « focalisé » = son état survolé ---
+  setFocus(index) {
+    const n = this.buttons.length;
+    this.focusIndex = ((index % n) + n) % n; // enroule haut/bas
+    this.buttons.forEach((b, i) => b.setFocused(i === this.focusIndex));
+  }
+
+  activateFocused() {
+    const b = this.buttons[this.focusIndex];
+    if (b) b.activate();
   }
 
   // Transition sortante commune : fondu au noir puis changement de scène.
@@ -265,21 +300,28 @@ export default class MenuScene extends Phaser.Scene {
     // bg (fond) → hit (au-dessus, invisible) → txt (au-dessus, cliquable)
     c.add([bg, hit, txt]);
 
+    // API partagée souris / clavier : le focus clavier et le survol souris
+    // pilotent le même état visuel.
+    c.setFocused = (on) => {
+      drawBg(on ? 'hover' : 'idle');
+      c.setScale(on ? 1.02 : 1);
+    };
+    c.activate = () => {
+      if (this.panel) return;
+      onClick();
+    };
+
     hit.on('pointerover', () => {
-      drawBg('hover');
-      c.setScale(1.02);
-    });
-    hit.on('pointerout', () => {
-      drawBg('idle');
-      c.setScale(1);
+      const i = this.buttons ? this.buttons.indexOf(c) : -1;
+      if (i !== -1) this.setFocus(i);
+      else c.setFocused(true);
     });
     hit.on('pointerdown', () => {
       c.setScale(0.985);
     });
     hit.on('pointerup', () => {
       c.setScale(1.02);
-      if (this.panel) return;
-      onClick();
+      c.activate();
     });
 
     return c;
@@ -299,10 +341,6 @@ export default class MenuScene extends Phaser.Scene {
 
     // fond noir : couvre tout l'écran quelle que soit la taille
     this.bg.setSize(w, h);
-
-    // image d'ambiance en cover : remplit l'écran sans déformer
-    const cover = Math.max(w / this.bgImage.width, h / this.bgImage.height);
-    this.bgImage.setScale(cover).setPosition(cx, h / 2);
 
     // vignette : centrée, un peu plus grande que l'écran
     const vSize = Math.max(w, h) * 1.4;
@@ -352,8 +390,8 @@ export default class MenuScene extends Phaser.Scene {
     this.subtitle.setPosition(cx, logoY + logoH / 2 + 18);
 
     // Colonne de boutons centrée
-    const btnStart = h * 0.52;
-    const gap = 68;
+    const btnStart = h * 0.5;
+    const gap = 62;
     this.buttons.forEach((b, i) => b.setPosition(cx, btnStart + i * gap));
 
     this.footer.setPosition(w - 14, h - 8);
@@ -450,6 +488,78 @@ export default class MenuScene extends Phaser.Scene {
       )
       .setOrigin(0.5, 0);
     c.add(body);
+
+    this.registerPanelEsc();
+  }
+
+  // --- Panneau OPTIONS : réglages persistants (localStorage) ---
+  openOptionsPanel() {
+    if (this.panel) this.closePanel();
+    const W = Math.min(560, this.scale.width * 0.86);
+    const H = Math.min(360, this.scale.height * 0.7);
+    const { container: c } = this.makePanelFrame(W, H, 'OPTIONS');
+
+    const rowY0 = -H / 2 + 100;
+    const rowH = 56;
+
+    const addRow = (i, labelText, getLabel, onToggle) => {
+      const y = rowY0 + i * rowH;
+      const label = this.add
+        .text(-W / 2 + 40, y, labelText, {
+          fontFamily: FONT_BODY,
+          fontSize: '17px',
+          color: PARCHMENT,
+        })
+        .setOrigin(0, 0.5);
+      let btn;
+      const rebuild = () => {
+        if (btn) btn.destroy();
+        btn = this.makeSmallButton(getLabel(), W / 2 - 130, y, () => {
+          onToggle();
+          rebuild();
+        });
+        c.add(btn);
+      };
+      c.add(label);
+      rebuild();
+    };
+
+    addRow(
+      0,
+      'Plein écran',
+      () => (this.scale.isFullscreen ? 'DÉSACTIVER' : 'ACTIVER'),
+      () => {
+        if (this.scale.isFullscreen) this.scale.stopFullscreen();
+        else this.scale.startFullscreen();
+      },
+    );
+
+    addRow(
+      1,
+      'Qualité des effets',
+      () => (getSetting('effectsQuality') === 'low' ? 'RÉDUITS' : 'ÉLEVÉS'),
+      () => {
+        const next = getSetting('effectsQuality') === 'low' ? 'high' : 'low';
+        setSetting('effectsQuality', next);
+        this.embers.frequency = next === 'low' ? 420 : 180;
+      },
+    );
+
+    addRow(
+      2,
+      "Secousses d'écran",
+      () => (getSetting('screenShake') ? 'OUI' : 'NON'),
+      () => setSetting('screenShake', !getSetting('screenShake')),
+    );
+
+    const tip = this.add
+      .text(0, H / 2 - 28, 'Les réglages sont mémorisés sur cet appareil', {
+        fontFamily: 'Segoe UI, sans-serif',
+        fontSize: '11px',
+        color: '#5a5464',
+      })
+      .setOrigin(0.5);
+    c.add(tip);
 
     this.registerPanelEsc();
   }

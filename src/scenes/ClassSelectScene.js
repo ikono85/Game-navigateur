@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SWORD_CURSOR } from '../ui/cursors.js';
 import '../ui/class-select/class-select.css';
 
 // Correspondance carte → id de classe du jeu. Les visuels parlent français
@@ -46,6 +47,7 @@ export default class ClassSelectScene extends Phaser.Scene {
 
     this.overlay = document.createElement('div');
     this.overlay.className = 'cs-overlay';
+    this.overlay.style.cursor = SWORD_CURSOR;
     this.overlay.innerHTML = `
       <section class="cs-root">
         <div class="cs-panel">
@@ -90,6 +92,20 @@ export default class ClassSelectScene extends Phaser.Scene {
       });
     });
     startBtn.addEventListener('click', () => this.startGame());
+
+    // Flèches gauche/droite : circule entre les cartes (Entrée/Espace pour
+    // choisir, déjà géré par carte). L'overlay prend le focus clavier au
+    // montage pour que les flèches lui parviennent directement.
+    this.overlay.tabIndex = -1;
+    this.overlay.style.outline = 'none';
+    this.overlay.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault();
+      const i = cards.indexOf(document.activeElement);
+      const next = e.key === 'ArrowRight' ? i + 1 : (i === -1 ? 0 : i - 1);
+      cards[((next % cards.length) + cards.length) % cards.length].focus();
+    });
+    this.overlay.focus();
   }
 
   destroyOverlay() {

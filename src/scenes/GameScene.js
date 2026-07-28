@@ -11,6 +11,7 @@ import Torch from '../entities/Torch.js';
 import { getClass, CLASSES } from '../classes/index.js';
 import { DONJON_XS } from '../maps/arena.js';
 import { floorKey, wallKey } from '../gfx/tileset.js';
+import { CROSSHAIR_CURSOR } from '../ui/cursors.js';
 
 // Les assets peints sont déjà dans la bonne ambiance ; pas besoin de teinte.
 // Constantes conservées à null pour marquer que la sortie du pack CC0 est
@@ -96,6 +97,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.hud = new Hud(this, this.player);
     this.input.keyboard.on('keydown-ESC', () => this.leaveToMenu());
+    this.input.setDefaultCursor(CROSSHAIR_CURSOR);
     this.cameras.main.fadeIn(350, 0, 0, 0);
 
     this.scoreboard = new Scoreboard(this, this.roster, SCORE_TO_WIN);

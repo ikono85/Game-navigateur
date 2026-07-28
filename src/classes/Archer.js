@@ -1,4 +1,5 @@
 import { defineClass, areaDamage } from './BaseClass.js';
+import { screenShake } from '../systems/Settings.js';
 
 // Archer : équilibré, dégâts constants à longue portée. Sa Pluie de flèches
 // zone le terrain à l'endroit visé.
@@ -77,7 +78,7 @@ export default defineClass({
             });
           }
 
-          scene.cameras.main.shake(140, 0.004);
+          screenShake(scene, 140, 0.004);
           areaDamage(scene, combat, {
             x: tx,
             y: ty,

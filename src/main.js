@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import BootScene from './scenes/BootScene.js';
 import MenuScene from './scenes/MenuScene.js';
+import MenuBgScene from './scenes/MenuBgScene.js';
 import ClassSelectScene from './scenes/ClassSelectScene.js';
 import GameScene from './scenes/GameScene.js';
 
@@ -31,7 +32,7 @@ const config = {
       gravity: { x: 0, y: 0 },
     },
   },
-  scene: [BootScene, MenuScene, ClassSelectScene, GameScene],
+  scene: [BootScene, MenuBgScene, MenuScene, ClassSelectScene, GameScene],
 };
 
 const game = new Phaser.Game(config);
