@@ -44,6 +44,13 @@ export default class Bot extends Actor {
     return this.classDef.attack.type === 'projectile';
   }
 
+  // Ligne de vue vers une cible. Les scènes sans murs (fond de menu) ne
+  // fournissent pas hasLineOfSight : dans ce cas tout est visible.
+  canSee(target) {
+    if (typeof this.scene.hasLineOfSight !== 'function') return true;
+    return this.scene.hasLineOfSight(this.x, this.y, target.x, target.y);
+  }
+
   // Cible la plus proche, tous camps adverses confondus. Un ennemi invisible
   // est ignoré : c'est tout l'intérêt de l'Assassin.
   pickTarget() {
@@ -55,10 +62,12 @@ export default class Bot extends Actor {
       const d = Phaser.Math.Distance.Between(this.x, this.y, a.x, a.y);
       // distance pondérée : le joueur attire davantage l'attention
       const weighted = a.isPlayerControlled ? d * BOT_STATS.playerBias : d;
-      if (weighted < bestDist) {
-        bestDist = weighted;
-        best = a;
-      }
+      if (weighted >= bestDist) return;
+      // on ne cible pas un ennemi derrière un mur : plus de chasse ni de tir à
+      // l'aveugle contre une cible invisible pour le bot.
+      if (!this.canSee(a)) return;
+      bestDist = weighted;
+      best = a;
     });
     return best;
   }
@@ -130,6 +139,9 @@ export default class Bot extends Actor {
     const reach = spec.type === 'melee' ? spec.range : spec.maxRange;
     if (dist > reach) return;
     if (this.mana < (spec.manaCost || 0)) return;
+    // pas de tir à travers un mur si la cible s'est déplacée à couvert depuis le
+    // dernier balayage de cibles
+    if (this.target && !this.canSee(this.target)) return;
 
     this.cooldowns.attack = time + spec.cooldown * BOT_STATS.cooldownFactor;
     if (spec.manaCost) this.mana -= spec.manaCost;

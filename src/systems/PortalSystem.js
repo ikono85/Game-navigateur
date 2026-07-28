@@ -53,6 +53,14 @@ export default class PortalSystem {
     if (!this.canPlace(owner, slot)) return null;
     if (!this.isFreeSpot(owner.x, owner.y)) return null;
 
+    // Refuse une pose trop proche de la bouche opposée : sinon la sortie tombe
+    // dans le rayon de déclenchement du jumeau et l'entité oscille en boucle.
+    const otherSlot = slot === 'A' ? 'B' : 'A';
+    const twin = this.portals.find((p) => p.owner === owner && p.slot === otherSlot);
+    if (twin && Phaser.Math.Distance.Between(owner.x, owner.y, twin.x, twin.y) < PORTAL.minSeparation) {
+      return null;
+    }
+
     this.slotTimers(owner)[slot] = this.scene.time.now + PORTAL.placeCooldown;
 
     // écrase le portail existant du même emplacement

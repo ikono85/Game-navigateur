@@ -12,6 +12,7 @@ import { getClass, CLASSES } from '../classes/index.js';
 import { DONJON_XS } from '../maps/arena.js';
 import { floorKey, wallKey } from '../gfx/tileset.js';
 import { CROSSHAIR_CURSOR } from '../ui/cursors.js';
+import { lineOfSightClear } from '../systems/los.js';
 
 // Les assets peints sont déjà dans la bonne ambiance ; pas besoin de teinte.
 // Constantes conservées à null pour marquer que la sortie du pack CC0 est
@@ -62,13 +63,12 @@ export default class GameScene extends Phaser.Scene {
       tileSize: TILE_SIZE,
     });
 
-    // Joueur
+    // Joueur (les bots n'existent pas encore : le collider joueur↔bots est
+    // ajouté juste après leur création).
+    this.bots = [];
+    this.playerColliders = [];
     const spawn = this.findSpawn(map);
-    this.player = new Player(this, spawn.x, spawn.y, this.combat, this.classDef);
-    this.physics.add.collider(this.player, this.walls);
-    this.combat.registerActor(this.player);
-    this.player.once('died', () => this.onPlayerDeath());
-    this.attachPlayerLight();
+    this.createPlayer(spawn.x, spawn.y);
 
     // Feuille de match : chaque concurrent garde son identité et son score
     // d'une réapparition à l'autre.
@@ -80,11 +80,11 @@ export default class GameScene extends Phaser.Scene {
       this.roster.push({ team: `bot${i + 1}`, name: def.name, classDef: def, score: 0 });
     }
 
-    this.bots = [];
     this.roster.filter((e) => !e.isPlayer).forEach((entry) => this.spawnBot(entry));
 
-    // Les acteurs se bloquent entre eux
-    this.physics.add.collider(this.player, this.bots);
+    // Les acteurs se bloquent entre eux. Le collider joueur↔bots est mémorisé
+    // dans playerColliders pour être détruit et recréé à chaque respawn.
+    this.playerColliders.push(this.physics.add.collider(this.player, this.bots));
     this.physics.add.collider(this.bots, this.bots);
 
     // Caméra
@@ -167,9 +167,36 @@ export default class GameScene extends Phaser.Scene {
 
   // --- Mort et réapparition du joueur ---
 
+  // Fabrique unique du joueur : création, inscription au combat, colliders
+  // (mémorisés), lumière et suivi caméra. Utilisée au premier spawn ET au
+  // respawn, pour qu'aucune de ces étapes ne diverge entre les deux.
+  createPlayer(x, y) {
+    this.player = new Player(this, x, y, this.combat, this.classDef);
+    this.combat.registerActor(this.player);
+    this.player.once('died', () => this.onPlayerDeath());
+    this.attachPlayerLight();
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+
+    this.playerColliders.push(this.physics.add.collider(this.player, this.walls));
+    if (this.bots.length) {
+      this.playerColliders.push(this.physics.add.collider(this.player, this.bots));
+    }
+    return this.player;
+  }
+
+  // Libère tout ce qui était rattaché à l'instance de joueur qui vient de
+  // mourir : inscription au combat (+ son overlap de projectiles) et colliders.
+  // Sans ça, chaque respawn empilait acteurs zombies et colliders fantômes.
+  teardownPlayer() {
+    this.combat.unregisterActor(this.player);
+    this.playerColliders.forEach((c) => c && c.destroy());
+    this.playerColliders = [];
+  }
+
   onPlayerDeath() {
     if (this.matchOver) return;
     this.creditKill(this.player);
+    this.teardownPlayer();
     if (this.matchOver) return;
 
     this.cameras.main.flash(200, 90, 0, 0);
@@ -181,15 +208,8 @@ export default class GameScene extends Phaser.Scene {
 
   respawnPlayer() {
     const pos = this.spawnPointAwayFromPlayer();
-    this.player = new Player(this, pos.x, pos.y, this.combat, this.classDef);
-    this.physics.add.collider(this.player, this.walls);
-    this.physics.add.collider(this.player, this.bots);
-    this.combat.registerActor(this.player);
-    this.player.once('died', () => this.onPlayerDeath());
-
-    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
+    this.createPlayer(pos.x, pos.y);
     this.hud.attach(this.player);
-    this.attachPlayerLight();
     // brève invulnérabilité pour ne pas mourir dans la seconde
     this.player.applyShield(1500, 0.8);
   }
@@ -257,7 +277,9 @@ export default class GameScene extends Phaser.Scene {
     // monde, les bots se battent aussi entre eux.
     const bot = new Bot(this, pos.x, pos.y, this.combat, entry.classDef, entry.team);
     bot.rosterEntry = entry;
-    this.physics.add.collider(bot, this.walls);
+    // Collider bot↔murs mémorisé sur le bot pour être détruit à sa mort : sinon
+    // il fuit à chaque respawn (Phaser ne le retire pas tout seul).
+    bot.wallCollider = this.physics.add.collider(bot, this.walls);
     this.combat.registerActor(bot);
     this.bots.push(bot);
 
@@ -267,6 +289,7 @@ export default class GameScene extends Phaser.Scene {
       const idx = this.bots.indexOf(bot);
       if (idx !== -1) this.bots.splice(idx, 1);
       this.combat.unregisterActor(bot);
+      if (bot.wallCollider) bot.wallCollider.destroy();
       this.creditKill(bot);
 
       this.time.delayedCall(RESPAWN_DELAY, () => {
@@ -275,6 +298,12 @@ export default class GameScene extends Phaser.Scene {
     });
 
     return bot;
+  }
+
+  // Ligne de vue entre deux points monde : les bots s'en servent pour ne pas
+  // cibler ni tirer à travers les murs.
+  hasLineOfSight(x0, y0, x1, y1) {
+    return lineOfSightClear(this.map, TILE_SIZE, x0, y0, x1, y1);
   }
 
   spawnPointAwayFromPlayer() {

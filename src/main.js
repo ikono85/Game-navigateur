@@ -37,6 +37,26 @@ const config = {
 
 const game = new Phaser.Game(config);
 
+// Garde-fou global. Une exception non rattrapée dans une boucle update() fige
+// Phaser en silence (écran noir, aucun indice). On affiche au moins un bandeau
+// lisible par-dessus le canvas au lieu de laisser l'utilisateur devant du noir.
+function showFatal(message) {
+  if (document.getElementById('fatal-error')) return;
+  const box = document.createElement('div');
+  box.id = 'fatal-error';
+  box.textContent = `Une erreur est survenue : ${message}. Rechargez la page.`;
+  box.style.cssText =
+    'position:fixed;left:50%;top:16px;transform:translateX(-50%);z-index:9999;' +
+    'max-width:90vw;padding:12px 18px;border-radius:8px;background:#2a0f12;' +
+    "color:#ffb4b4;font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;" +
+    'box-shadow:0 4px 24px #000a;';
+  document.body.appendChild(box);
+}
+window.addEventListener('error', (e) => showFatal(e.message || 'inconnue'));
+window.addEventListener('unhandledrejection', (e) =>
+  showFatal((e.reason && e.reason.message) || 'promesse rejetée'),
+);
+
 // Exposé en local uniquement, pratique pour inspecter l'état depuis la console.
 // Test sur l'hôte plutôt que sur import.meta.env : ce fichier doit aussi pouvoir
 // tourner sans Vite (voir l'import map dans index.html), où import.meta.env

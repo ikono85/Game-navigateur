@@ -10,6 +10,11 @@ export default class CombatSystem {
     this.scene = scene;
     this.walls = walls;
     this.actors = [];
+    // Cache de la liste des acteurs vivants : `liveActors` était re-filtré à
+    // chaque accès (chaque frame par PortalSystem, chaque zone, chaque dash),
+    // soit une allocation par frame qui nourrissait le GC. Invalidé dès que la
+    // composition change (register/unregister) ou qu'un acteur meurt.
+    this._liveCache = null;
 
     this.projectiles = scene.physics.add.group({
       classType: Projectile,
@@ -26,10 +31,15 @@ export default class CombatSystem {
 
   registerActor(actor) {
     this.actors.push(actor);
+    this._liveCache = null;
     // Collision projectile ↔ acteur (on filtre les alliés dans le process).
     // NB : Phaser peut inverser l'ordre des arguments du callback selon qu'il
     // passe par collideSpriteVsGroup ou l'inverse — d'où la normalisation.
-    this.scene.physics.add.overlap(
+    //
+    // Le Collider retourné est mémorisé sur l'acteur : sans ça, il survivait à
+    // la mort de l'acteur (Phaser ne retire pas un collider quand le GameObject
+    // est détruit) et s'accumulait à chaque respawn. unregisterActor le détruit.
+    actor._projOverlap = this.scene.physics.add.overlap(
       this.projectiles,
       actor,
       (a, b) => {
@@ -54,10 +64,25 @@ export default class CombatSystem {
 
   unregisterActor(actor) {
     this.actors = this.actors.filter((a) => a !== actor);
+    this._liveCache = null;
+    // Détruit l'overlap projectile↔acteur créé dans registerActor, sinon il
+    // fuit (broadphase qui grossit à chaque respawn).
+    if (actor._projOverlap) {
+      actor._projOverlap.destroy();
+      actor._projOverlap = null;
+    }
+  }
+
+  // Invalide le cache : appelé par Actor.die() pour que l'acteur mort quitte
+  // immédiatement la liste, même s'il n'est désenregistré qu'un peu plus tard.
+  invalidateLiveCache() {
+    this._liveCache = null;
   }
 
   get liveActors() {
-    return this.actors.filter((a) => a.active && !a.isDead);
+    if (this._liveCache) return this._liveCache;
+    this._liveCache = this.actors.filter((a) => a.active && !a.isDead);
+    return this._liveCache;
   }
 
   onProjectileHit(proj, target) {
@@ -68,9 +93,11 @@ export default class CombatSystem {
       target.takeDamage(proj.damage, proj.owner, 140);
     }
 
-    // Boule de feu : explosion AoE à l'impact
+    // Boule de feu : explosion AoE à l'impact. On passe le propriétaire du tir
+    // (proj.owner) et non seulement son camp : c'est lui qui doit être crédité
+    // de l'élimination, sinon les kills de zone ne sont attribués à personne.
     if (spec && spec.aoeRadius) {
-      Spell.explode(this.scene, x, y, spec, proj.team, this.liveActors);
+      Spell.explode(this.scene, x, y, spec, proj.owner, this.liveActors);
     }
 
     proj.kill();

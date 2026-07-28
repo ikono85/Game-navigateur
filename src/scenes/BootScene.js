@@ -31,6 +31,13 @@ export default class BootScene extends Phaser.Scene {
   }
 
   preload() {
+    // Un asset manquant devenait la texture __MISSING de Phaser (32×32), ce qui
+    // faussait silencieusement les hitboxes (Actor lit frame.realWidth) sans le
+    // moindre message. On journalise chaque échec pour qu'un 404 soit visible.
+    this.load.on('loaderror', (file) => {
+      console.error(`[assets] échec de chargement : ${file.key} (${file.src})`);
+    });
+
     // --- Pack A — Personnages ---
     CLASSES.forEach((c) => {
       this.load.image(`player_${c.id}`, `${A}/characters/player_${c.id}.png`);
