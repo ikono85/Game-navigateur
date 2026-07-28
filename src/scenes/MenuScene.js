@@ -26,6 +26,16 @@ const PARCHMENT = '#e8d8b0';
 const IRON_DEEP = 0x0a0a12;
 const IRON_MID = 0x1a1a22;
 
+// Palette reprise de l'écran de sélection de classe (class-select.css) pour
+// que menu et sélection forment un seul univers visuel.
+const INK = '#1e1509';
+const EMBER_HEX = 0xff4d1f;
+const PARCH_TOP = 0xe5d7b4;
+const PARCH_BOTTOM = 0xa28d6a;
+const PARCH_TOP_HOT = 0xf2e7cd;
+const FONT_TITLE = '"Cinzel Decorative", Cinzel, Georgia, serif';
+const FONT_BODY = 'Cinzel, Georgia, serif';
+
 const BTN_W = 320;
 const BTN_H = 54;
 
@@ -74,7 +84,7 @@ export default class MenuScene extends Phaser.Scene {
 
     this.subtitle = this.add
       .text(0, 0, 'Arène du Portail — Dark Fantasy médiévale', {
-        fontFamily: 'Georgia, serif',
+        fontFamily: FONT_BODY,
         fontStyle: 'italic',
         fontSize: '18px',
         color: '#9a8a70',
@@ -84,7 +94,7 @@ export default class MenuScene extends Phaser.Scene {
 
     // 7. Boutons du menu
     this.buttons = [
-      this.makeButton('▶  JOUER', () => this.scene.start('ClassSelectScene')),
+      this.makeButton('▶  JOUER', () => this.goTo('ClassSelectScene')),
       this.makeButton('⚔  COMMANDES', () => this.openCommandsPanel()),
       this.makeButton('✧  CRÉDITS', () => this.openCreditsPanel()),
     ];
@@ -110,10 +120,10 @@ export default class MenuScene extends Phaser.Scene {
     // Les handlers vérifient l'absence de panneau ouvert pour ne pas voler
     // les touches destinées à une saisie de rebind.
     this.input.keyboard.on('keydown-ENTER', () => {
-      if (!this.panel) this.scene.start('ClassSelectScene');
+      if (!this.panel) this.goTo('ClassSelectScene');
     });
     this.input.keyboard.on('keydown-SPACE', () => {
-      if (!this.panel) this.scene.start('ClassSelectScene');
+      if (!this.panel) this.goTo('ClassSelectScene');
     });
     this.input.keyboard.on('keydown-C', () => {
       if (!this.panel) this.openCommandsPanel();
@@ -121,6 +131,28 @@ export default class MenuScene extends Phaser.Scene {
 
     // Animation continue des flammes
     this.events.on(Phaser.Scenes.Events.UPDATE, this.tickTorches, this);
+
+    // Entrée en fondu
+    this.cameras.main.fadeIn(350, 0, 0, 0);
+
+    // Les textes canvas sont rendus avant que Cinzel soit chargée : on force
+    // un nouveau rendu de tous les textes une fois les polices prêtes.
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => {
+        if (!this.scene.isActive()) return;
+        this.children.list.forEach((o) => o.updateText && o.updateText());
+      });
+    }
+  }
+
+  // Transition sortante commune : fondu au noir puis changement de scène.
+  goTo(key, data) {
+    if (this.leaving) return;
+    this.leaving = true;
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start(key, data);
+    });
   }
 
   // --- Torche : sconce + flamme + halo lumineux additif ---
@@ -168,31 +200,47 @@ export default class MenuScene extends Phaser.Scene {
   // origine 0.5 par défaut, donc parfaitement centrée sur la position du
   // container. Éviter Container.setInteractive(Geom.Rectangle) qui, combiné
   // à setSize, décale le hit-test vers le coin haut-gauche selon les versions.
+  // Style « parchemin doré » repris des boutons de l'écran de sélection :
+  // dégradé parchemin, texte encre, liseré clair en haut / sombre en bas.
+  // Au survol, le liseré passe braise (--ember du CSS) au lieu de l'or.
   makeButton(label, onClick) {
     const c = this.add.container(0, 0).setDepth(110);
     const bg = this.add.graphics();
     const txt = this.add
       .text(0, 0, label, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '22px',
-        color: PARCHMENT,
+        fontFamily: FONT_BODY,
+        fontSize: '20px',
+        fontStyle: '700',
+        color: INK,
+        letterSpacing: 3,
       })
-      .setOrigin(0.5)
-      .setShadow(0, 2, '#000000', 6, false, true);
+      .setOrigin(0.5);
 
     const drawBg = (state) => {
       bg.clear();
-      const fillColor = state === 'hover' ? 0x22222e : IRON_MID;
-      bg.fillStyle(fillColor, 0.92);
-      bg.fillRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 6);
+      const hover = state === 'hover';
 
-      bg.lineStyle(2, state === 'hover' ? GOLD_HEX : GOLD_DARK, state === 'hover' ? 1 : 0.9);
-      bg.strokeRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 6);
-      bg.lineStyle(1, 0x3a3a44, 0.6);
-      bg.strokeRoundedRect(-BTN_W / 2 + 4, -BTN_H / 2 + 4, BTN_W - 8, BTN_H - 8, 4);
+      // ombre portée
+      bg.fillStyle(0x000000, 0.45);
+      bg.fillRoundedRect(-BTN_W / 2 + 3, -BTN_H / 2 + 6, BTN_W, BTN_H, 4);
+
+      // dégradé parchemin (plus clair au survol)
+      const top = hover ? PARCH_TOP_HOT : PARCH_TOP;
+      bg.fillGradientStyle(top, top, PARCH_BOTTOM, PARCH_BOTTOM, 1);
+      bg.fillRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 4);
+
+      // liseré haut clair / bas sombre, comme border-top/bottom du .cs-btn
+      bg.lineStyle(1.5, 0xf4e9cf, 1);
+      bg.lineBetween(-BTN_W / 2 + 4, -BTN_H / 2 + 1, BTN_W / 2 - 4, -BTN_H / 2 + 1);
+      bg.lineStyle(1.5, 0x6d5a3b, 1);
+      bg.lineBetween(-BTN_W / 2 + 4, BTN_H / 2 - 1, BTN_W / 2 - 4, BTN_H / 2 - 1);
+
+      // contour : or discret au repos, braise au survol
+      bg.lineStyle(hover ? 2 : 1.4, hover ? EMBER_HEX : GOLD_DARK, hover ? 0.9 : 0.8);
+      bg.strokeRoundedRect(-BTN_W / 2, -BTN_H / 2, BTN_W, BTN_H, 4);
 
       const orn = 9;
-      bg.lineStyle(1.4, state === 'hover' ? GOLD_HEX : 0x8a7a4a, 1);
+      bg.lineStyle(1.4, hover ? EMBER_HEX : 0x8a7a4a, 1);
       const corners = [
         [-BTN_W / 2 + 6, -BTN_H / 2 + 6, 1, 1],
         [BTN_W / 2 - 6, -BTN_H / 2 + 6, -1, 1],
@@ -219,17 +267,17 @@ export default class MenuScene extends Phaser.Scene {
 
     hit.on('pointerover', () => {
       drawBg('hover');
-      txt.setColor(GOLD);
+      c.setScale(1.02);
     });
     hit.on('pointerout', () => {
       drawBg('idle');
-      txt.setColor(PARCHMENT);
+      c.setScale(1);
     });
     hit.on('pointerdown', () => {
-      drawBg('hover');
-      txt.setColor('#fff2c0');
+      c.setScale(0.985);
     });
     hit.on('pointerup', () => {
+      c.setScale(1.02);
       if (this.panel) return;
       onClick();
     });
@@ -344,8 +392,8 @@ export default class MenuScene extends Phaser.Scene {
 
     const title = this.add
       .text(0, -H / 2 + 34, titleText, {
-        fontFamily: 'Georgia, serif',
-        fontSize: '28px',
+        fontFamily: FONT_TITLE,
+        fontSize: '26px',
         color: GOLD,
       })
       .setOrigin(0.5)
@@ -353,7 +401,7 @@ export default class MenuScene extends Phaser.Scene {
 
     const closeBtn = this.add
       .text(W / 2 - 22, -H / 2 + 22, '✕', {
-        fontFamily: 'Georgia, serif',
+        fontFamily: FONT_BODY,
         fontSize: '22px',
         color: '#8a7a4a',
       })
@@ -421,7 +469,7 @@ export default class MenuScene extends Phaser.Scene {
       const y = rowY0 + i * rowH;
       const label = this.add
         .text(-W / 2 + 40, y, action.label, {
-          fontFamily: 'Georgia, serif',
+          fontFamily: FONT_BODY,
           fontSize: '17px',
           color: PARCHMENT,
         })
@@ -438,7 +486,7 @@ export default class MenuScene extends Phaser.Scene {
         0, infoY,
         'Souris  —  clic gauche : attaque   ·   clic droit : spécial',
         {
-          fontFamily: 'Georgia, serif',
+          fontFamily: FONT_BODY,
           fontStyle: 'italic',
           fontSize: '13px',
           color: '#7a7284',
@@ -611,7 +659,7 @@ export default class MenuScene extends Phaser.Scene {
     const bg = this.add.graphics();
     const txt = this.add
       .text(0, 0, label, {
-        fontFamily: 'Georgia, serif',
+        fontFamily: FONT_BODY,
         fontSize: '15px',
         color: PARCHMENT,
       })

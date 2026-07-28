@@ -199,7 +199,11 @@
   inset: 0;
   z-index: 50;
   overflow-y: auto;
+  animation: cs-fade-in .3s ease both;
+  transition: opacity .25s ease;
 }
+.cs-overlay.is-leaving { opacity: 0; pointer-events: none; }
+@keyframes cs-fade-in { from { opacity: 0; } to { opacity: 1; } }
 
 /* Bouton de lancement sous la grille : même matière que .cs-btn mais
    plus large ; grisé tant qu'aucune classe n'est choisie. */

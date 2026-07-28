@@ -95,7 +95,8 @@ export default class GameScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize', this.applyZoom, this));
 
     this.hud = new Hud(this, this.player);
-    this.input.keyboard.on('keydown-ESC', () => this.scene.start('MenuScene'));
+    this.input.keyboard.on('keydown-ESC', () => this.leaveToMenu());
+    this.cameras.main.fadeIn(350, 0, 0, 0);
 
     this.scoreboard = new Scoreboard(this, this.roster, SCORE_TO_WIN);
     this.events.once('shutdown', () => this.scoreboard.destroy());
@@ -207,7 +208,17 @@ export default class GameScene extends Phaser.Scene {
     );
 
     this.time.delayedCall(3400, () => {
-      if (this.scene.isActive()) this.scene.start('MenuScene');
+      if (this.scene.isActive()) this.leaveToMenu();
+    });
+  }
+
+  // Sortie vers le menu en fondu au noir (Échap ou fin de match).
+  leaveToMenu() {
+    if (this.leavingScene) return;
+    this.leavingScene = true;
+    this.cameras.main.fadeOut(250, 0, 0, 0);
+    this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
+      this.scene.start('MenuScene');
     });
   }
 

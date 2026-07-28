@@ -22,7 +22,7 @@ export default class ClassSelectScene extends Phaser.Scene {
     this.selectedId = null;
     this.buildOverlay();
 
-    this.input.keyboard.on('keydown-ESC', () => this.scene.start('MenuScene'));
+    this.input.keyboard.on('keydown-ESC', () => this.leaveTo('MenuScene'));
     this.input.keyboard.on('keydown-ENTER', () => this.startGame());
     this.events.once('shutdown', () => this.destroyOverlay());
   }
@@ -101,6 +101,14 @@ export default class ClassSelectScene extends Phaser.Scene {
 
   startGame() {
     if (!this.selectedId) return;
-    this.scene.start('GameScene', { classId: this.selectedId });
+    this.leaveTo('GameScene', { classId: this.selectedId });
+  }
+
+  // Fondu de sortie de l'overlay DOM, puis changement de scène.
+  leaveTo(key, data) {
+    if (this.leaving) return;
+    this.leaving = true;
+    if (this.overlay) this.overlay.classList.add('is-leaving');
+    this.time.delayedCall(250, () => this.scene.start(key, data));
   }
 }
