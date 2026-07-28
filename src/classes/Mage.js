@@ -1,3 +1,4 @@
+import Phaser from 'phaser';
 import { defineClass, areaDamage } from './BaseClass.js';
 import { screenShake } from '../systems/Settings.js';
 
@@ -40,7 +41,7 @@ export default defineClass({
       const wave = scene.add
         .image(player.x, player.y, 'spell_nova_wave')
         .setDepth(430)
-        .setBlendMode('ADD')
+        .setBlendMode(Phaser.BlendModes.ADD)
         .setAlpha(1)
         .setScale(0.1);
       const endScale = (spec.radius * 2.05) / 256;
@@ -61,6 +62,7 @@ export default defineClass({
         radius: spec.radius,
         damage: spec.damage,
         team: player.team,
+        owner: player,
         falloff: 0.4,
         knockback: 380,
       });

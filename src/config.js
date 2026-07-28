@@ -51,6 +51,9 @@ export const PORTAL = {
   triggerRadius: 30, // rayon de déclenchement
   exitOffset: 34, // distance de sortie, pour ne pas re-déclencher la sortie
   radius: 26, // rayon visuel
+  // Écart minimum entre les deux bouches d'un même joueur : trop proches, on
+  // ressort dans le rayon de déclenchement du jumeau et on oscille en boucle.
+  minSeparation: 120,
 };
 
 // Armes / sorts communs à toutes les classes. `cooldown` en ms, `manaCost` en

@@ -85,6 +85,7 @@ export default defineClass({
             radius: spec.radius,
             damage: spec.damage,
             team: player.team,
+            owner: player,
             falloff: 0.35,
             knockback: 90,
           });

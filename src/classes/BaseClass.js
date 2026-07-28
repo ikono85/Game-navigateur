@@ -37,12 +37,20 @@ export function defineClass(def) {
 }
 
 // Utilitaire partagé : dégâts de zone centrés sur un point.
-export function areaDamage(scene, combat, { x, y, radius, damage, team, falloff = 0.5, knockback = 120 }) {
+//
+// `owner` est l'acteur qui déclenche la zone : il est crédité de l'élimination.
+// Sans lui, les kills de Nova / Pluie de flèches n'étaient attribués à personne
+// (le point {x,y} n'a pas de camp). Le recul, lui, part du centre de la zone.
+export function areaDamage(
+  scene,
+  combat,
+  { x, y, radius, damage, team, owner = null, falloff = 0.5, knockback = 120 },
+) {
   combat.liveActors.forEach((t) => {
     if (t.team === team) return;
     const d = Phaser.Math.Distance.Between(x, y, t.x, t.y);
     if (d > radius) return;
     const mult = 1 - (d / radius) * falloff;
-    t.takeDamage(damage * mult, { x, y }, knockback);
+    t.takeDamage(damage * mult, owner || { x, y }, knockback, { x, y });
   });
 }

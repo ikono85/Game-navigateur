@@ -5,8 +5,11 @@ import { screenShake } from '../systems/Settings.js';
 // Effets de sorts non-projectiles. Les projectiles magiques (boule de feu)
 // passent par Projectile ; ici on gère l'explosion à l'impact et le bouclier.
 export default class Spell {
-  // Explosion AoE à l'impact d'une boule de feu.
-  static explode(scene, x, y, spec, attackerTeam, targets) {
+  // Explosion AoE à l'impact d'une boule de feu. `attacker` est l'acteur qui a
+  // tiré : il porte l'AoE pour que l'élimination lui soit créditée (et non à un
+  // simple point sans camp, ce qui laissait les kills de zone non attribués).
+  static explode(scene, x, y, spec, attacker, targets) {
+    const attackerTeam = attacker && attacker.team;
     // Onde de choc peinte (shockwave.png teintable), qui s'étend et s'estompe
     const wave = scene.add
       .image(x, y, 'shockwave')
@@ -49,9 +52,10 @@ export default class Spell {
       if (!t.active || t.isDead || t.team === attackerTeam) return;
       const d = Phaser.Math.Distance.Between(x, y, t.x, t.y);
       if (d <= spec.aoeRadius) {
-        // dégâts dégressifs vers le bord de la zone
+        // dégâts dégressifs vers le bord de la zone. Crédit à l'attaquant, mais
+        // recul depuis le centre de l'explosion (4e argument).
         const falloff = 1 - (d / spec.aoeRadius) * 0.5;
-        t.takeDamage(spec.aoeDamage * falloff, { x, y }, 120);
+        t.takeDamage(spec.aoeDamage * falloff, attacker || { x, y }, 120, { x, y });
       }
     });
   }

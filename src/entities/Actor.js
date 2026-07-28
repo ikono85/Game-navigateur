@@ -57,8 +57,13 @@ export default class Actor extends Phaser.Physics.Arcade.Sprite {
     this.shieldReduction = reduction;
   }
 
-  // Inflige des dégâts. `from` sert au recul (knockback) optionnel.
-  takeDamage(amount, from = null, knockback = 0) {
+  // Inflige des dégâts.
+  //  - `from`         : l'auteur du coup, crédité de l'élimination (un acteur).
+  //  - `knockback`    : intensité du recul.
+  //  - `knockbackFrom`: origine géométrique du recul, distincte de `from` pour
+  //    les dégâts de zone (le recul part du centre de l'explosion, mais le kill
+  //    est crédité à l'attaquant qui se trouve ailleurs). Défaut = `from`.
+  takeDamage(amount, from = null, knockback = 0, knockbackFrom = from) {
     if (this.isDead || !this.active) return;
 
     let dmg = amount;
@@ -78,8 +83,8 @@ export default class Actor extends Phaser.Physics.Arcade.Sprite {
       if (this.active) this.clearTint();
     });
 
-    if (from && knockback > 0 && this.body) {
-      const angle = Phaser.Math.Angle.Between(from.x, from.y, this.x, this.y);
+    if (knockbackFrom && knockback > 0 && this.body) {
+      const angle = Phaser.Math.Angle.Between(knockbackFrom.x, knockbackFrom.y, this.x, this.y);
       this.body.velocity.x += Math.cos(angle) * knockback;
       this.body.velocity.y += Math.sin(angle) * knockback;
     }
@@ -90,6 +95,9 @@ export default class Actor extends Phaser.Physics.Arcade.Sprite {
   die() {
     if (this.isDead) return;
     this.isDead = true;
+    // Quitte immédiatement la liste des acteurs vivants (cache) : évite qu'un
+    // mort continue d'être ciblé ou touché dans la même frame.
+    if (this.scene && this.scene.combat) this.scene.combat.invalidateLiveCache();
     if (this.body) this.body.enable = false;
     this.setVelocity(0, 0);
 
