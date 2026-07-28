@@ -35,6 +35,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // L'instance de scène est réutilisée par Phaser d'une partie à l'autre :
+    // ce drapeau, mis à true en quittant, doit repartir de false à chaque
+    // nouvelle partie — sinon la pause et le retour au menu seraient bloqués.
+    this.leavingScene = false;
+
     const map = DONJON_XS;
     this.map = map;
     this.worldW = map[0].length * TILE_SIZE;

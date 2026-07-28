@@ -47,6 +47,11 @@ export default class MenuScene extends Phaser.Scene {
   }
 
   create() {
+    // Phaser réutilise la même instance de scène d'un start() à l'autre : ce
+    // drapeau, mis à true par goTo(), doit être remis à false à chaque entrée
+    // dans le menu — sinon, après une première partie, JOUER reste inerte.
+    this.leaving = false;
+
     // 0. Aperçu animé : la scène de démo (bots qui s'affrontent) tourne
     // derrière le menu ; notre voile sombre la laisse deviner sans gêner
     // la lecture des boutons.
