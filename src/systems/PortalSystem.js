@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import Portal from '../entities/Portal.js';
 import { PORTAL, COLORS } from '../config.js';
+import Sfx from './Sfx.js';
 
 // PortalSystem : pose, expiration et traversée des portails.
 //
@@ -71,6 +72,7 @@ export default class PortalSystem {
     this.portals.push(portal);
 
     this.relink(owner);
+    Sfx.portal();
     return portal;
   }
 

@@ -7,6 +7,7 @@ const KEY = 'shadowgate-settings';
 const DEFAULTS = {
   effectsQuality: 'high', // 'high' | 'low'
   screenShake: true,
+  sound: true,
 };
 
 let cache = null;

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import HealthBar from '../combat/HealthBar.js';
 import Particles from '../combat/Particles.js';
+import Sfx from '../systems/Sfx.js';
 
 // Actor : base commune au joueur et aux bots. Gère PV, prise de dégâts,
 // feedback visuel (flash rouge), recul, bouclier et mort.
@@ -103,6 +104,7 @@ export default class Actor extends Phaser.Physics.Arcade.Sprite {
 
     // Gerbe de sang à la position du corps
     Particles.blood(this.scene, this.x, this.y);
+    Sfx.death();
 
     // animation de mort : rétrécit + fond au noir
     this.scene.tweens.add({

@@ -3,6 +3,7 @@ import Actor from './Actor.js';
 import MeleeAttack from '../combat/MeleeAttack.js';
 import { WEAPONS } from '../config.js';
 import { getBinding } from '../systems/Keybindings.js';
+import Sfx from '../systems/Sfx.js';
 
 // Player : une seule implémentation, pilotée par une définition de classe
 // (voir src/classes/). Les stats, l'attaque, le spécial et le passif viennent
@@ -81,8 +82,13 @@ export default class Player extends Actor {
     // attaquer révèle l'assassin
     this.breakInvisibility();
 
-    if (spec.type === 'melee') this.resolveMelee(spec);
-    else this.combat.fireProjectile(this, this.rotation, spec, spec.projectile);
+    if (spec.type === 'melee') {
+      this.resolveMelee(spec);
+      Sfx.melee();
+    } else {
+      this.combat.fireProjectile(this, this.rotation, spec, spec.projectile);
+      Sfx.shoot();
+    }
     return true;
   }
 
@@ -115,6 +121,7 @@ export default class Player extends Actor {
     if (!this.ready('special') || !this.canAfford(spec)) return false;
     this.spend('special', spec);
 
+    Sfx.special();
     spec.execute(this, {
       scene: this.scene,
       combat: this.combat,

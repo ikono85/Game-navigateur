@@ -20,6 +20,9 @@ export default class ClassSelectScene extends Phaser.Scene {
   }
 
   create() {
+    // Réinitialise le drapeau de sortie : l'instance de scène est réutilisée
+    // par Phaser, sans ça une 2e visite refuserait de lancer la partie.
+    this.leaving = false;
     this.selectedId = null;
     this.buildOverlay();
 
